@@ -21,6 +21,7 @@ from pathlib import Path
 from .baseline import enrich_with_baseline, record_samples
 from .brief import compose_brief, has_critical
 from .notifier import ALL_NOTIFIERS, fan_out
+from .summarizer import summarize
 from .sources import (
     VercelSource,
     ProductHuntSource,
@@ -60,6 +61,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="Custom brief title")
     p.add_argument("--no-baseline", action="store_true",
                    help="Skip 7-day baseline lookup + recording (useful for tests)")
+    p.add_argument("--no-summary", action="store_true",
+                   help="Skip the Claude-generated narrative summary at the top of the brief.")
     p.add_argument("--notify", default=None,
                    help="Comma-separated notifier list (ntfy,telegram,slack). "
                         "Default: NOTIFIER_DEFAULT env var or none.")
@@ -116,8 +119,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         return 0
 
-    # Default: brief mode
-    text = compose_brief(reports, title=args.title)
+    # Default: brief mode — optionally prepend Claude narrative summary
+    summary_text = None if args.no_summary else summarize(reports)
+    text = compose_brief(reports, title=args.title, summary=summary_text)
     if args.out:
         Path(args.out).write_text(text)
         print(f"✓ brief written to {args.out}", file=sys.stderr)

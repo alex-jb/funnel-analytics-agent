@@ -20,12 +20,22 @@ SEVERITY_RANK = {"critical": 0, "alert": 1, "warn": 2, "info": 3}
 SEVERITY_ICON = {"critical": "🚨", "alert": "❗", "warn": "🟡", "info": "·"}
 
 
-def compose_brief(reports: list[SourceReport], *, title: str | None = None) -> str:
-    """Render a list of SourceReports as one markdown brief."""
+def compose_brief(reports: list[SourceReport], *,
+                  title: str | None = None,
+                  summary: str | None = None) -> str:
+    """Render a list of SourceReports as one markdown brief.
+
+    Optional `summary` is a pre-computed Claude narrative (see summarizer.py)
+    that gets rendered as the second section, before any details. Pass None
+    or empty string to skip.
+    """
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     title = title or f"Morning Brief — {now}"
 
     out: list[str] = [f"# {title}", ""]
+
+    if summary:
+        out += ["## 🧠 Summary", "", summary.strip(), ""]
 
     # Collect all metrics with their source
     flat: list[tuple[str, MetricSample]] = []

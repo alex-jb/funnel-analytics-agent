@@ -76,7 +76,7 @@ funnel-analytics-agent --source vercel --source producthunt
 - [x] **v0.3** —— 7 天 baseline · `delta_pct` 自动计算 · 跌幅 >50% 自动升级到 warn · 41 个测试
 - [ ] **v0.3** —— 异常检测(z-score / 7 天基线 / 区分星期几)
 - [ ] **v0.4** —— 推送适配器(Telegram / ntfy.sh / Slack)
-- [ ] **v0.5** —— Claude 合成 brief —— LLM 把原始指标改写成自然语言摘要
+- [x] **v0.5** —— Claude 合成 brief 顶部摘要(Haiku 4.5 默认,~$0.0008/run,无 key 自动降级)
 
 ## 协议
 
