@@ -67,13 +67,14 @@ funnel-analytics-agent --source vercel --source producthunt
 - **Each source fails independently.** Vercel API down? Your brief still gets PH stats. The failed source is listed at the bottom of the brief; never kills the whole agent.
 - **No external dependencies (yet).** Pure stdlib `urllib` — no requests, no httpx, no API client SDKs. Keeps install fast and pip-install-friendly on locked-down boxes.
 - **Markdown-first output.** Output is meant to be human-readable in Obsidian / VS Code, not piped through a dashboard service.
-- **Stdin/exit codes for cron, not push notifications.** v0.1 doesn't ship a Telegram/Slack adapter — your cron wrapper does that. Keeps the agent's surface tiny.
+- **Exit codes for cron, not push notifications.** v0.1-v0.3 don't ship a Telegram/Slack adapter — your cron wrapper does that. Keeps the agent's surface tiny.
+- **7-day baseline auto-built from your own runs.** No need to seed historical data. After 24h of cron runs the baseline starts forming; after 7 days it's solid. Bootstrap mode (no history) just skips delta calculation — never blocks output.
 
 ## Roadmap
 
 - [x] **v0.1** — Vercel + Product Hunt sources · brief mode · alert mode · cron-friendly
 - [x] **v0.2** — OpenPanel, HyperDX, Supabase advisor sources (5 sources total, 30 tests)
-- [ ] **v0.3** — Anomaly detection (z-score / 7-day baseline / day-of-week-aware)
+- [x] **v0.3** — 7-day baseline · `delta_pct` enrichment · severity promotion on >50% drops · 41 tests
 - [ ] **v0.4** — Push notifier adapters (Telegram, ntfy.sh, Slack)
 - [ ] **v0.5** — Claude-summarized brief — LLM rewrites raw metrics as plain-English narrative
 

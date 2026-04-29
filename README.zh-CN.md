@@ -73,6 +73,7 @@ funnel-analytics-agent --source vercel --source producthunt
 
 - [x] **v0.1** —— Vercel + Product Hunt 数据源 · brief 模式 · alert 模式 · cron 友好
 - [x] **v0.2** —— OpenPanel + HyperDX + Supabase advisor 数据源(5 个 source · 30 个测试)
+- [x] **v0.3** —— 7 天 baseline · `delta_pct` 自动计算 · 跌幅 >50% 自动升级到 warn · 41 个测试
 - [ ] **v0.3** —— 异常检测(z-score / 7 天基线 / 区分星期几)
 - [ ] **v0.4** —— 推送适配器(Telegram / ntfy.sh / Slack)
 - [ ] **v0.5** —— Claude 合成 brief —— LLM 把原始指标改写成自然语言摘要

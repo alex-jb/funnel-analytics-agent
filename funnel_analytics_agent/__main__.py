@@ -18,6 +18,7 @@ import os
 import sys
 from pathlib import Path
 
+from .baseline import enrich_with_baseline, record_samples
 from .brief import compose_brief, has_critical
 from .sources import (
     VercelSource,
@@ -56,6 +57,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="Write brief to file instead of stdout")
     p.add_argument("--title", default=None,
                    help="Custom brief title")
+    p.add_argument("--no-baseline", action="store_true",
+                   help="Skip 7-day baseline lookup + recording (useful for tests)")
     args = p.parse_args(argv)
 
     selected = args.source or list(ALL_SOURCES.keys())
@@ -73,6 +76,12 @@ def main(argv: list[str] | None = None) -> int:
                 fetched_at=datetime.now(timezone.utc),
                 error=f"unhandled: {e}",
             ))
+
+    # Enrich with 7-day baseline (mutates reports in place; populates
+    # baseline + delta_pct, may promote severity on big drops)
+    if not args.no_baseline:
+        enrich_with_baseline(reports)
+        record_samples(reports)
 
     if args.alert:
         # Real-time alert mode: exit 2 if any critical/alert
