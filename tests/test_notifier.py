@@ -99,7 +99,10 @@ def test_telegram_send_success(monkeypatch):
     import json
     payload = json.loads(req.data)
     assert payload["chat_id"] == "12345"
-    assert "*brief*" in payload["text"]
+    # Plain text — title is just newline-separated, no markdown wrappers
+    assert payload["text"].startswith("brief\n\nbody")
+    # parse_mode must NOT be set (Markdown V1 rejects our **bold**)
+    assert "parse_mode" not in payload
 
 
 def test_telegram_network_error_returns_false(monkeypatch):

@@ -80,6 +80,12 @@ class TelegramNotifier(Notifier):
     https://api.telegram.org/bot<TOKEN>/getUpdates.
 
     Env: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+
+    Sends as plain text (no parse_mode) on purpose: our briefs use
+    `**bold**` (CommonMark) which Telegram's legacy "Markdown" mode rejects
+    with HTTP 400, and the noise of escaping every special char for
+    MarkdownV2 (_*[]()~`>#+-=|{}.!) isn't worth it for an alert. Plain text
+    renders fine on every Telegram client.
     """
     name = "telegram"
 
@@ -98,11 +104,10 @@ class TelegramNotifier(Notifier):
 
         body = message[:MAX_MESSAGE_CHARS]
         if title:
-            body = f"*{title}*\n\n{body}"
+            body = f"{title}\n\n{body}"
         payload = json.dumps({
             "chat_id": chat_id,
             "text": body,
-            "parse_mode": "Markdown",
             "disable_web_page_preview": True,
         }).encode()
         req = urllib.request.Request(url, data=payload,

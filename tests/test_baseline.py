@@ -188,3 +188,131 @@ def test_record_skips_non_numeric_values(tmp_path, monkeypatch):
     rows = log.read_text().strip().splitlines()
     assert len(rows) == 1
     assert json.loads(rows[0])["name"] == "b"
+
+
+# ─── rotation ──────────────────────────────────────────────────────
+
+def test_rotate_skips_when_under_threshold(tmp_path, monkeypatch):
+    """Don't rotate if the file is small. Verify the live file is unchanged."""
+    from funnel_analytics_agent.baseline import _rotate_if_needed
+    log = tmp_path / "baseline.jsonl"
+    monkeypatch.setenv("BASELINE_LOG_PATH", str(log))
+    log.write_text(json.dumps({
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "source": "v", "name": "x", "value": 1,
+    }) + "\n")
+    before = log.read_text()
+    _rotate_if_needed(log)
+    assert log.read_text() == before
+    # No archive file created
+    assert list(tmp_path.glob("baseline-*.jsonl.gz")) == []
+
+
+def test_rotate_archives_old_samples(tmp_path, monkeypatch):
+    """Force rotation by patching the threshold; verify old rows go to .gz
+    and recent rows stay in the live file."""
+    from funnel_analytics_agent import baseline as bl
+    log = tmp_path / "baseline.jsonl"
+    monkeypatch.setenv("BASELINE_LOG_PATH", str(log))
+    monkeypatch.setattr(bl, "ROTATE_THRESHOLD_BYTES", 1)  # force rotate
+
+    now = datetime.now(timezone.utc)
+    old_ts = (now - timedelta(days=30)).isoformat()
+    new_ts = (now - timedelta(days=2)).isoformat()
+    log.write_text("\n".join([
+        json.dumps({"ts": old_ts, "source": "v", "name": "x", "value": 1}),
+        json.dumps({"ts": old_ts, "source": "v", "name": "x", "value": 2}),
+        json.dumps({"ts": new_ts, "source": "v", "name": "x", "value": 99}),
+    ]) + "\n")
+
+    bl._rotate_if_needed(log, now=now)
+
+    # Live file: only the 2-day-old row remains (within 14-day keep window)
+    live = log.read_text().strip().splitlines()
+    assert len(live) == 1
+    assert json.loads(live[0])["value"] == 99
+
+    # Archive file: 2 old rows
+    archives = list(tmp_path.glob("baseline-*.jsonl.gz"))
+    assert len(archives) == 1
+    import gzip as _gz
+    with _gz.open(archives[0], "rb") as f:
+        archived = f.read().decode().strip().splitlines()
+    assert len(archived) == 2
+    assert all(json.loads(r)["value"] in (1, 2) for r in archived)
+
+
+def test_rotate_appends_to_existing_archive(tmp_path, monkeypatch):
+    """If an archive for the same month already exists, append to it."""
+    from funnel_analytics_agent import baseline as bl
+    log = tmp_path / "baseline.jsonl"
+    monkeypatch.setenv("BASELINE_LOG_PATH", str(log))
+    monkeypatch.setattr(bl, "ROTATE_THRESHOLD_BYTES", 1)
+
+    now = datetime.now(timezone.utc)
+    old_ts = (now - timedelta(days=30)).isoformat()
+    archive_path = tmp_path / f"baseline-{datetime.fromisoformat(old_ts).strftime('%Y-%m')}.jsonl.gz"
+    import gzip as _gz
+    with _gz.open(archive_path, "wb") as f:
+        f.write(json.dumps({"ts": old_ts, "source": "v", "name": "x",
+                              "value": 999}).encode() + b"\n")
+
+    log.write_text(json.dumps({
+        "ts": old_ts, "source": "v", "name": "x", "value": 1,
+    }) + "\n")
+    bl._rotate_if_needed(log, now=now)
+
+    with _gz.open(archive_path, "rb") as f:
+        archived = f.read().decode().strip().splitlines()
+    # Pre-existing 999 + newly archived 1
+    assert len(archived) == 2
+    values = sorted(json.loads(r)["value"] for r in archived)
+    assert values == [1, 999]
+
+
+def test_rotate_corrupt_lines_kept_in_live(tmp_path, monkeypatch):
+    """Unparseable lines stay in the live file (don't get silently dropped)."""
+    from funnel_analytics_agent import baseline as bl
+    log = tmp_path / "baseline.jsonl"
+    monkeypatch.setenv("BASELINE_LOG_PATH", str(log))
+    monkeypatch.setattr(bl, "ROTATE_THRESHOLD_BYTES", 1)
+
+    now = datetime.now(timezone.utc)
+    old_ts = (now - timedelta(days=30)).isoformat()
+    log.write_text(
+        json.dumps({"ts": old_ts, "source": "v", "name": "x", "value": 1}) + "\n"
+        + "this line is corrupt\n"
+        + json.dumps({"ts": (now - timedelta(days=2)).isoformat(),
+                       "source": "v", "name": "x", "value": 99}) + "\n"
+    )
+    bl._rotate_if_needed(log, now=now)
+    live = log.read_text().splitlines()
+    # Corrupt line + recent row both in live file
+    assert "this line is corrupt" in live
+    assert any('"value": 99' in r for r in live)
+
+
+def test_record_triggers_rotation(tmp_path, monkeypatch):
+    """Integration: record_samples should call rotation before appending."""
+    from funnel_analytics_agent import baseline as bl
+    log = tmp_path / "baseline.jsonl"
+    monkeypatch.setenv("BASELINE_LOG_PATH", str(log))
+    monkeypatch.setattr(bl, "ROTATE_THRESHOLD_BYTES", 1)
+
+    now = datetime.now(timezone.utc)
+    old_ts = (now - timedelta(days=30)).isoformat()
+    log.write_text(json.dumps({
+        "ts": old_ts, "source": "v", "name": "old_metric", "value": 100,
+    }) + "\n")
+
+    metrics = [MetricSample(name="new_metric", value=42, severity="info")]
+    record_samples([_report("v", metrics)], now=now)
+
+    # Live file should now have just the new metric (old rotated out)
+    live = log.read_text().strip().splitlines()
+    names = [json.loads(r).get("name") for r in live]
+    assert "new_metric" in names
+    assert "old_metric" not in names
+    # Old metric in archive
+    archives = list(tmp_path.glob("baseline-*.jsonl.gz"))
+    assert len(archives) == 1

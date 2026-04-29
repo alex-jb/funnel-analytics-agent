@@ -75,7 +75,7 @@ funnel-analytics-agent --source vercel --source producthunt
 - [x] **v0.1** — Vercel + Product Hunt sources · brief mode · alert mode · cron-friendly
 - [x] **v0.2** — OpenPanel, HyperDX, Supabase advisor sources (5 sources total, 30 tests)
 - [x] **v0.3** — 7-day baseline · `delta_pct` enrichment · severity promotion on >50% drops · 41 tests
-- [ ] **v0.4** — Push notifier adapters (Telegram, ntfy.sh, Slack)
+- [x] **v0.4** — Push notifier adapters (ntfy.sh / Telegram / Slack) + macOS launchd installer (54 tests)
 - [x] **v0.5** — Claude-summarized brief at top of every report (Haiku 4.5 default; ~$0.0008/run; falls back gracefully)
 
 ## License

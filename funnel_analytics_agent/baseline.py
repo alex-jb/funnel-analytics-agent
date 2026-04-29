@@ -23,6 +23,7 @@ read/write failures are silently swallowed; baseline is a nice-to-have, not
 load-bearing.
 """
 from __future__ import annotations
+import gzip
 import json
 import os
 import pathlib
@@ -35,6 +36,14 @@ from .sources.base import MetricSample, SourceReport
 
 BASELINE_WINDOW_DAYS = 7
 ANOMALY_DROP_PCT = -50.0  # delta_pct below this triggers severity promotion
+
+# Rotate baseline.jsonl when it exceeds this size. PH at every-7min cadence
+# writes ~50KB/day across 5 sources × ~6 metrics, so 10MB ≈ ~6 months of
+# data. We keep the last BASELINE_WINDOW_DAYS × 2 days during rotation
+# (ensures the 7-day baseline lookup still has full coverage post-rotate)
+# and gzip the rest into baseline-<yyyy-mm>.jsonl.gz alongside.
+ROTATE_THRESHOLD_BYTES = 10 * 1024 * 1024
+ROTATE_KEEP_DAYS = BASELINE_WINDOW_DAYS * 2
 
 
 def _log_path() -> pathlib.Path:
@@ -122,16 +131,98 @@ def enrich_with_baseline(reports: Iterable[SourceReport],
                     f" ⚠ {drop:.0f}% below 7-day median ({base:.0f})")
 
 
+def _rotate_if_needed(path: pathlib.Path,
+                      *, now: datetime | None = None) -> None:
+    """Rotate the baseline log when it exceeds ROTATE_THRESHOLD_BYTES.
+
+    Splits in two:
+      * The last ROTATE_KEEP_DAYS days of samples stay in baseline.jsonl
+        (so the 7-day-baseline lookup still has full data after rotation).
+      * Everything older is gzipped to baseline-<yyyy-mm>.jsonl.gz next
+        to it. Each archive is append-only across rotations, so multiple
+        old months coexist.
+
+    Best-effort: any failure swallows silently and leaves the file alone.
+    """
+    if not path.exists():
+        return
+    try:
+        if path.stat().st_size < ROTATE_THRESHOLD_BYTES:
+            return
+    except Exception:
+        return
+
+    now = now or datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=ROTATE_KEEP_DAYS)
+    keep_lines: list[str] = []
+    archive_lines: list[str] = []
+
+    try:
+        for raw in path.read_text().splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+                ts = datetime.fromisoformat(row["ts"].replace("Z", "+00:00"))
+            except Exception:
+                # Keep unparseable rows in the live file rather than
+                # silently dropping; user can inspect manually.
+                keep_lines.append(line)
+                continue
+            if ts >= cutoff:
+                keep_lines.append(line)
+            else:
+                archive_lines.append(line)
+    except Exception:
+        return
+
+    if not archive_lines:
+        return  # nothing to rotate
+
+    # Append archived lines to baseline-<yyyy-mm>.jsonl.gz (oldest archived
+    # row's month). We append rather than overwrite so subsequent rotations
+    # in the same month coexist.
+    try:
+        first_archived_ts = datetime.fromisoformat(
+            json.loads(archive_lines[0])["ts"].replace("Z", "+00:00"))
+        archive_name = f"baseline-{first_archived_ts.strftime('%Y-%m')}.jsonl.gz"
+        archive_path = path.parent / archive_name
+
+        # Read existing archive content (if any) and rewrite with appended
+        # lines. gzip doesn't natively support append in stdlib without
+        # spinning up a fresh stream per write.
+        existing = b""
+        if archive_path.exists():
+            with gzip.open(archive_path, "rb") as f:
+                existing = f.read()
+        new_content = existing + ("\n".join(archive_lines) + "\n").encode()
+        with gzip.open(archive_path, "wb") as f:
+            f.write(new_content)
+
+        # Atomically replace the live file with kept lines
+        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        tmp_path.write_text("\n".join(keep_lines) + "\n" if keep_lines else "")
+        tmp_path.replace(path)
+    except Exception:
+        # Rotation failed — leave the live file alone; we'll try again
+        # next run. No data loss.
+        return
+
+
 def record_samples(reports: Iterable[SourceReport],
                    *, now: datetime | None = None) -> None:
     """Append the current run's metrics to the baseline log. Best-effort —
-    a hook firing every 7min during PH would write ~200 rows/day, which is
-    fine; rotation is a v0.4 problem.
+    a hook firing every 7min during PH writes ~200 rows/day; rotation
+    triggers automatically when the file passes 10MB (~6 months at typical
+    cadence) and gzips old samples to baseline-<yyyy-mm>.jsonl.gz.
     """
     now = now or datetime.now(timezone.utc)
     try:
         path = _log_path()
         path.parent.mkdir(parents=True, exist_ok=True)
+        # Rotate FIRST (don't write into an already-too-big file)
+        _rotate_if_needed(path, now=now)
         with path.open("a") as f:
             for r in reports:
                 for m in r.metrics:
