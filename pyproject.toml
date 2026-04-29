@@ -1,6 +1,6 @@
 [project]
 name = "funnel-analytics-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "Daily morning brief + real-time anomaly alerts across Vercel / OpenPanel / HyperDX / Supabase / Product Hunt for indie launches."
 authors = [{ name = "Alex Ji", email = "alex@vibexforge.com" }]
 license = { text = "MIT" }

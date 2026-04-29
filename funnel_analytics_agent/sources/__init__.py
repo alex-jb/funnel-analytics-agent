@@ -2,6 +2,9 @@
 from .base import MetricSample, Source, SourceReport
 from .vercel import VercelSource
 from .producthunt import ProductHuntSource
+from .supabase import SupabaseAdvisorSource
+from .openpanel import OpenPanelSource
+from .hyperdx import HyperDXSource
 
 __all__ = [
     "MetricSample",
@@ -9,4 +12,7 @@ __all__ = [
     "SourceReport",
     "VercelSource",
     "ProductHuntSource",
+    "SupabaseAdvisorSource",
+    "OpenPanelSource",
+    "HyperDXSource",
 ]

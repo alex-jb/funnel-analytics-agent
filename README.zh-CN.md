@@ -19,11 +19,12 @@
 
 **Alert 模式** —— launch 窗口期间每 10 分钟跑一次,发现 critical / alert 级别问题就 exit 2。你的 cron wrapper 收到非 0 退出就给你发 Telegram / Slack / ntfy.sh。
 
-v0.1 数据源:
+v0.2 数据源:
 - **Vercel** —— 最新部署状态、24 小时内部署次数、失败部署
 - **Product Hunt** —— 实时票数、评论数、launch 当天动量检查
-
-v0.2 即将加入(这周):OpenPanel, HyperDX, Supabase advisor。
+- **Supabase advisor** —— 安全 + 性能 lint;每个 CRITICAL 单独列一条
+- **OpenPanel** —— 24 小时内被追踪事件的数量(signup_completed 等);事件归零时 warn(可能 tracking regression)
+- **HyperDX** —— N 小时内 error log 数量;严重等级随数量爬阶 info → warn → alert(10 / 50 阈值)
 
 ## 安装
 
@@ -71,7 +72,7 @@ funnel-analytics-agent --source vercel --source producthunt
 ## Roadmap
 
 - [x] **v0.1** —— Vercel + Product Hunt 数据源 · brief 模式 · alert 模式 · cron 友好
-- [ ] **v0.2** —— OpenPanel, HyperDX, Supabase advisor 数据源
+- [x] **v0.2** —— OpenPanel + HyperDX + Supabase advisor 数据源(5 个 source · 30 个测试)
 - [ ] **v0.3** —— 异常检测(z-score / 7 天基线 / 区分星期几)
 - [ ] **v0.4** —— 推送适配器(Telegram / ntfy.sh / Slack)
 - [ ] **v0.5** —— Claude 合成 brief —— LLM 把原始指标改写成自然语言摘要

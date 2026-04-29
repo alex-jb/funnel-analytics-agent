@@ -19,11 +19,12 @@ Two modes, one agent:
 
 **Alert mode** — runs every 10 minutes during your launch window, exits with code `2` if anything critical/alert severity is found. Your wrapper script pages you (Telegram, Slack, ntfy.sh).
 
-Sources in v0.1:
+Sources in v0.2:
 - **Vercel** — latest deployment state, deployments in last 24h, failed deploys
 - **Product Hunt** — live vote count, comment count, momentum check on launch day
-
-Coming v0.2 (this week): OpenPanel, HyperDX, Supabase advisor.
+- **Supabase advisor** — security + performance lints; surfaces every CRITICAL individually
+- **OpenPanel** — count of tracked events (signup_completed, project_submit_completed, …) over last 24h; warns when an event drops to 0 (tracking regression)
+- **HyperDX** — error log count over last N hours; severity climbs from info → warn → alert as count crosses 10 / 50 thresholds
 
 ## Install
 
@@ -71,7 +72,7 @@ funnel-analytics-agent --source vercel --source producthunt
 ## Roadmap
 
 - [x] **v0.1** — Vercel + Product Hunt sources · brief mode · alert mode · cron-friendly
-- [ ] **v0.2** — OpenPanel, HyperDX, Supabase advisor sources
+- [x] **v0.2** — OpenPanel, HyperDX, Supabase advisor sources (5 sources total, 30 tests)
 - [ ] **v0.3** — Anomaly detection (z-score / 7-day baseline / day-of-week-aware)
 - [ ] **v0.4** — Push notifier adapters (Telegram, ntfy.sh, Slack)
 - [ ] **v0.5** — Claude-summarized brief — LLM rewrites raw metrics as plain-English narrative

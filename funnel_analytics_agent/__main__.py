@@ -19,12 +19,21 @@ import sys
 from pathlib import Path
 
 from .brief import compose_brief, has_critical
-from .sources import VercelSource, ProductHuntSource
+from .sources import (
+    VercelSource,
+    ProductHuntSource,
+    SupabaseAdvisorSource,
+    OpenPanelSource,
+    HyperDXSource,
+)
 from .sources.base import Source
 
 ALL_SOURCES: dict[str, type[Source]] = {
     "vercel": VercelSource,
     "producthunt": ProductHuntSource,
+    "supabase": SupabaseAdvisorSource,
+    "openpanel": OpenPanelSource,
+    "hyperdx": HyperDXSource,
 }
 
 
