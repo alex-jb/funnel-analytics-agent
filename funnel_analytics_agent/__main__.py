@@ -20,6 +20,7 @@ from pathlib import Path
 
 from .baseline import enrich_with_baseline, record_samples
 from .brief import compose_brief, has_critical
+from .notifier import ALL_NOTIFIERS, fan_out
 from .sources import (
     VercelSource,
     ProductHuntSource,
@@ -59,6 +60,9 @@ def main(argv: list[str] | None = None) -> int:
                    help="Custom brief title")
     p.add_argument("--no-baseline", action="store_true",
                    help="Skip 7-day baseline lookup + recording (useful for tests)")
+    p.add_argument("--notify", default=None,
+                   help="Comma-separated notifier list (ntfy,telegram,slack). "
+                        "Default: NOTIFIER_DEFAULT env var or none.")
     args = p.parse_args(argv)
 
     selected = args.source or list(ALL_SOURCES.keys())
@@ -83,14 +87,32 @@ def main(argv: list[str] | None = None) -> int:
         enrich_with_baseline(reports)
         record_samples(reports)
 
+    # Resolve notifier list (CLI arg > env var > none)
+    notify_str = args.notify or os.getenv("NOTIFIER_DEFAULT", "")
+    notify_targets = [n.strip() for n in notify_str.split(",")
+                      if n.strip() and n.strip() in ALL_NOTIFIERS]
+
     if args.alert:
         # Real-time alert mode: exit 2 if any critical/alert
         if has_critical(reports):
+            critical_lines: list[str] = []
             for r in reports:
                 for m in r.metrics:
                     if m.severity in ("critical", "alert"):
-                        print(f"[{r.source}] {m.severity.upper()}: {m.note}",
-                              file=sys.stderr)
+                        line = f"[{r.source}] {m.severity.upper()}: {m.note}"
+                        critical_lines.append(line)
+                        print(line, file=sys.stderr)
+            # Push notification on critical/alert
+            if notify_targets and critical_lines:
+                results = fan_out(
+                    notify_targets,
+                    "\n".join(critical_lines),
+                    title=f"funnel-agent · {len(critical_lines)} alert(s)",
+                    priority="urgent",
+                )
+                for name, ok in results.items():
+                    icon = "✓" if ok else "✗"
+                    print(f"  notifier {icon} {name}", file=sys.stderr)
             return 2
         return 0
 
@@ -101,6 +123,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"✓ brief written to {args.out}", file=sys.stderr)
     else:
         print(text)
+
+    # Push the brief if any notifier configured
+    if notify_targets:
+        priority = "high" if has_critical(reports) else "default"
+        results = fan_out(
+            notify_targets,
+            text,
+            title=args.title or "morning brief",
+            priority=priority,
+        )
+        for name, ok in results.items():
+            icon = "✓" if ok else "✗"
+            print(f"  notifier {icon} {name}", file=sys.stderr)
     return 0
 
 
