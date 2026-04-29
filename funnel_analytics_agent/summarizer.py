@@ -1,26 +1,27 @@
 """Claude-powered narrative summary for the morning brief.
 
-Takes the raw SourceReport list, dumps the metrics into a structured prompt,
-and asks Claude for a 2-4 sentence executive summary. Surfaces the most
-important thing first ("signup dropped 70% overnight; root cause likely
-the Vercel deploy that errored at 21:34"), not just a list of numbers.
+Uses solo_founder_os.AnthropicClient for graceful degrade + automatic
+cost log to ~/.funnel-analytics-agent/usage.jsonl. cost-audit-agent
+reads that file and aggregates monthly spend.
 
-Designed to read in 10 seconds before the rest of the brief.
-
-Graceful degradation: no ANTHROPIC_API_KEY → returns "" (caller skips the
-summary section). LLM error → same. Never blocks the brief from rendering.
-
-Cost: ~600 input tokens + ~150 output per run. Haiku 4.5 default = ~$0.0008
-per brief. Daily cron = ~$0.024/month. Negligible.
+The prompt is unchanged from v0.5; the only refactor is wiring through
+the shared client.
 """
 from __future__ import annotations
 import os
+import pathlib
 from typing import Iterable
 
-from .sources.base import SourceReport
+from solo_founder_os.anthropic_client import (
+    AnthropicClient,
+    DEFAULT_HAIKU_MODEL,
+)
+from solo_founder_os.source import SourceReport
 
 
-DEFAULT_MODEL = os.getenv("FUNNEL_SUMMARY_MODEL", "claude-haiku-4-5")
+DEFAULT_MODEL = os.getenv("FUNNEL_SUMMARY_MODEL", DEFAULT_HAIKU_MODEL)
+USAGE_LOG_PATH = (pathlib.Path.home()
+                  / ".funnel-analytics-agent" / "usage.jsonl")
 
 
 SYSTEM_PROMPT = """You are an indie founder's morning briefing analyst.
@@ -62,11 +63,14 @@ def _build_input(reports: Iterable[SourceReport]) -> str:
 
 
 def summarize(reports: list[SourceReport],
-              *, model: str = DEFAULT_MODEL) -> str:
+              *, model: str = DEFAULT_MODEL,
+              client: AnthropicClient | None = None) -> str:
     """Return a 2-4 sentence narrative summary of the reports, or "" if no
-    LLM is available / the call fails."""
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        return ""
+    LLM is available / the call fails.
+
+    `client` is injectable for tests. In production, leave it None and the
+    function constructs an AnthropicClient pointed at the funnel usage log.
+    """
     if not reports:
         return ""
 
@@ -74,16 +78,18 @@ def summarize(reports: list[SourceReport],
     if not user_input.strip():
         return ""
 
-    try:
-        from anthropic import Anthropic
-        client = Anthropic()
-        resp = client.messages.create(
-            model=model,
-            max_tokens=300,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_input}],
-        )
-        text = "".join(b.text for b in resp.content if b.type == "text").strip()
-        return text
-    except Exception:
+    if client is None:
+        client = AnthropicClient(usage_log_path=USAGE_LOG_PATH)
+
+    if not client.configured:
         return ""
+
+    resp, err = client.messages_create(
+        model=model,
+        max_tokens=300,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_input}],
+    )
+    if err is not None:
+        return ""
+    return AnthropicClient.extract_text(resp)

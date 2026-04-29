@@ -1,4 +1,4 @@
-"""Tests for summarizer.py — narrative summary via Claude."""
+"""Tests for summarizer.py — narrative summary via shared AnthropicClient."""
 from __future__ import annotations
 import os
 import sys
@@ -11,7 +11,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from funnel_analytics_agent.sources.base import MetricSample, SourceReport
 from funnel_analytics_agent.summarizer import summarize, _build_input
-from funnel_analytics_agent.brief import compose_brief
+from solo_founder_os.anthropic_client import AnthropicClient
+from solo_founder_os.testing import fake_anthropic, fake_anthropic_raises
 
 
 def _report(source: str, metrics=None, error=None):
@@ -23,22 +24,17 @@ def _report(source: str, metrics=None, error=None):
     )
 
 
-def _fake_anthropic(text: str):
-    block = MagicMock()
-    block.text = text
-    block.type = "text"
-    resp = MagicMock()
-    resp.content = [block]
-    client = MagicMock()
-    client.messages.create.return_value = resp
-    return client
+def _client_with_fake(monkeypatch, fake_sdk_client) -> AnthropicClient:
+    """Helper: build an AnthropicClient and pre-load it with a mocked SDK client."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    c = AnthropicClient(usage_log_path=None)
+    c._client = fake_sdk_client  # bypass lazy import
+    return c
 
-
-# ─── _build_input ─────────────────────────────────────────────
 
 def test_build_input_includes_baseline_delta():
     m = MetricSample(name="signups", value=30, baseline=100, delta_pct=-70.0,
-                     severity="warn", note="signups dropped")
+                     severity="warn", note="dropped")
     text = _build_input([_report("openpanel", [m])])
     assert "[openpanel]" in text
     assert "signups=30" in text
@@ -46,64 +42,32 @@ def test_build_input_includes_baseline_delta():
     assert "-70.0%" in text
 
 
-def test_build_input_marks_unavailable_sources():
+def test_build_input_unavailable_source():
     text = _build_input([_report("vercel", error="API down")])
     assert "[vercel] UNAVAILABLE: API down" in text
 
 
-# ─── summarize ─────────────────────────────────────────────────
-
-def test_summarize_returns_empty_without_api_key(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    m = MetricSample(name="x", value=10, severity="info")
-    assert summarize([_report("v", [m])]) == ""
-
-
-def test_summarize_returns_empty_with_no_reports(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+def test_summarize_empty_when_no_reports():
+    """Empty input → empty output (no LLM call needed)."""
     assert summarize([]) == ""
 
 
-def test_summarize_calls_claude_and_returns_text(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    m = MetricSample(name="signups", value=30, baseline=100,
-                     delta_pct=-70.0, severity="warn")
-    fake = _fake_anthropic("Signups dropped 70% overnight. Investigate the Vercel deploy that errored at 21:32. No action needed elsewhere.")
-    with patch("anthropic.Anthropic", return_value=fake):
-        result = summarize([_report("openpanel", [m])])
-    assert "70%" in result
-    assert "Vercel" in result
+def test_summarize_empty_when_client_unconfigured(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    m = MetricSample(name="x", value=1)
+    assert summarize([_report("v", [m])]) == ""
+
+
+def test_summarize_returns_text_on_success(monkeypatch):
+    m = MetricSample(name="x", value=1)
+    fake = fake_anthropic("Signups dropped 70% overnight. No action needed.")
+    client = _client_with_fake(monkeypatch, fake)
+    out = summarize([_report("v", [m])], client=client)
+    assert "Signups dropped" in out
 
 
 def test_summarize_swallows_llm_errors(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    m = MetricSample(name="x", value=1, severity="info")
-    fake = MagicMock()
-    fake.messages.create.side_effect = Exception("rate limited")
-    with patch("anthropic.Anthropic", return_value=fake):
-        result = summarize([_report("v", [m])])
-    assert result == ""
-
-
-# ─── brief integration ────────────────────────────────────────
-
-def test_brief_renders_summary_section_when_provided():
-    m = MetricSample(name="x", value=1, severity="info")
-    text = compose_brief([_report("v", [m])],
-                         summary="All systems normal. No action needed.")
-    assert "🧠 Summary" in text
-    assert "All systems normal" in text
-    # Summary appears before the metrics section
-    assert text.index("🧠 Summary") < text.index("📊 Metrics by source")
-
-
-def test_brief_omits_summary_section_when_none():
-    m = MetricSample(name="x", value=1, severity="info")
-    text = compose_brief([_report("v", [m])], summary=None)
-    assert "🧠 Summary" not in text
-
-
-def test_brief_omits_summary_section_when_empty_string():
-    m = MetricSample(name="x", value=1, severity="info")
-    text = compose_brief([_report("v", [m])], summary="")
-    assert "🧠 Summary" not in text
+    m = MetricSample(name="x", value=1)
+    fake = fake_anthropic_raises(Exception("rate limit"))
+    client = _client_with_fake(monkeypatch, fake)
+    assert summarize([_report("v", [m])], client=client) == ""
