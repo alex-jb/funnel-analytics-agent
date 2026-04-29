@@ -5,6 +5,8 @@ from .producthunt import ProductHuntSource
 from .supabase import SupabaseAdvisorSource
 from .openpanel import OpenPanelSource
 from .hyperdx import HyperDXSource
+from .buildquality import BuildQualitySource
+from .agent_spend import AgentSpendSource
 
 __all__ = [
     "MetricSample",
@@ -15,4 +17,6 @@ __all__ = [
     "SupabaseAdvisorSource",
     "OpenPanelSource",
     "HyperDXSource",
+    "BuildQualitySource",
+    "AgentSpendSource",
 ]

@@ -28,6 +28,8 @@ from .sources import (
     SupabaseAdvisorSource,
     OpenPanelSource,
     HyperDXSource,
+    BuildQualitySource,
+    AgentSpendSource,
 )
 from .sources.base import Source
 
@@ -37,6 +39,8 @@ ALL_SOURCES: dict[str, type[Source]] = {
     "supabase": SupabaseAdvisorSource,
     "openpanel": OpenPanelSource,
     "hyperdx": HyperDXSource,
+    "build_quality": BuildQualitySource,
+    "agent_spend": AgentSpendSource,
 }
 
 

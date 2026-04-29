@@ -1,13 +1,13 @@
 [project]
 name = "funnel-analytics-agent"
-version = "0.6.0"
+version = "0.7.0"
 description = "Daily morning brief + real-time anomaly alerts across Vercel / OpenPanel / HyperDX / Supabase / Product Hunt for indie launches."
 authors = [{ name = "Alex Ji", email = "alex@vibexforge.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "solo-founder-os>=0.1.0",
+    "solo-founder-os>=0.2.0",
 ]
 
 [project.optional-dependencies]
