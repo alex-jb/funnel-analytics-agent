@@ -1,0 +1,29 @@
+[project]
+name = "funnel-analytics-agent"
+version = "0.1.0"
+description = "Daily morning brief + real-time anomaly alerts across Vercel / OpenPanel / HyperDX / Supabase / Product Hunt for indie launches."
+authors = [{ name = "Alex Ji", email = "alex@vibexforge.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+funnel-analytics-agent = "funnel_analytics_agent.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/alex-jb/funnel-analytics-agent"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["funnel_analytics_agent", "funnel_analytics_agent.sources"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
