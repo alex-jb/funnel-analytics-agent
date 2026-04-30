@@ -78,6 +78,45 @@ funnel-analytics-agent --source vercel --source producthunt
 - [x] **v0.3** — 7-day baseline · `delta_pct` enrichment · severity promotion on >50% drops · 41 tests
 - [x] **v0.4** — Push notifier adapters (ntfy.sh / Telegram / Slack) + macOS launchd installer (54 tests)
 - [x] **v0.5** — Claude-summarized brief at top of every report (Haiku 4.5 default; ~$0.0008/run; falls back gracefully)
+- [x] **v0.8** — MCP server: query the morning brief / live alerts / per-source state from Claude Desktop
+
+## MCP server (Claude Desktop / Cursor / Zed)
+
+Expose the brief, alert state, and individual sources as tools your AI assistant can call.
+
+```bash
+pip install 'funnel-analytics-agent[mcp]'
+```
+
+Then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "funnel-analytics": {
+      "command": "funnel-analytics-mcp",
+      "env": {
+        "VERCEL_TOKEN": "...",
+        "VERCEL_PROJECT_ID": "...",
+        "PH_DEV_TOKEN": "...",
+        "PH_LAUNCH_SLUG": "your-launch-slug",
+        "OPENPANEL_CLIENT_ID": "...",
+        "OPENPANEL_CLIENT_SECRET": "...",
+        "HYPERDX_API_KEY": "...",
+        "SUPABASE_PERSONAL_ACCESS_TOKEN": "...",
+        "SUPABASE_PROJECT_REF": "...",
+        "ANTHROPIC_API_KEY": "..."
+      }
+    }
+  }
+}
+```
+
+Tools:
+- `get_brief(include_summary)` — full markdown morning brief
+- `get_alerts()` — alert-mode output: `All clear` or per-source severity
+- `get_source(name)` — single source (vercel / producthunt / openpanel / hyperdx / supabase)
+- `usage_summary()` — Anthropic token + $ totals from local usage log
 
 ## License
 

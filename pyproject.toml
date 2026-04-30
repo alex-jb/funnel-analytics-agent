@@ -1,13 +1,13 @@
 [project]
 name = "funnel-analytics-agent"
-version = "0.7.0"
+version = "0.8.0"
 description = "Daily morning brief + real-time anomaly alerts across Vercel / OpenPanel / HyperDX / Supabase / Product Hunt for indie launches."
 authors = [{ name = "Alex Ji", email = "alex@vibexforge.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "solo-founder-os>=0.2.0",
+    "solo-founder-os>=0.5.0",
 ]
 
 classifiers = [
@@ -26,10 +26,12 @@ keywords = ["analytics", "monitoring", "vercel", "product-hunt", "supabase", "in
 
 [project.optional-dependencies]
 anthropic = ["anthropic>=0.40"]
-dev = ["pytest>=8.0", "anthropic>=0.40"]
+mcp = ["mcp>=1.0"]
+dev = ["pytest>=8.0", "anthropic>=0.40", "mcp>=1.0"]
 
 [project.scripts]
 funnel-analytics-agent = "funnel_analytics_agent.__main__:main"
+funnel-analytics-mcp = "funnel_analytics_agent.mcp_server:main"
 
 [project.urls]
 Repository = "https://github.com/alex-jb/funnel-analytics-agent"

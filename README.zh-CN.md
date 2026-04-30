@@ -77,6 +77,45 @@ funnel-analytics-agent --source vercel --source producthunt
 - [x] **v0.3** —— 7 天 baseline · `delta_pct` 自动计算 · 跌幅 >50% 自动升级到 warn · 41 个测试
 - [x] **v0.4** —— 推送适配器(ntfy.sh / Telegram / Slack)+ macOS launchd 安装脚本(54 个测试)
 - [x] **v0.5** —— Claude 合成 brief 顶部摘要(Haiku 4.5 默认,~$0.0008/run,无 key 自动降级)
+- [x] **v0.8** —— MCP server:在 Claude Desktop 里直接询问"今早 brief"或"现在告警如何"
+
+## MCP server(Claude Desktop / Cursor / Zed)
+
+让 AI 助手直接调用 brief / alert / 单 source 数据。
+
+```bash
+pip install 'funnel-analytics-agent[mcp]'
+```
+
+然后在 `~/Library/Application Support/Claude/claude_desktop_config.json` 加上:
+
+```json
+{
+  "mcpServers": {
+    "funnel-analytics": {
+      "command": "funnel-analytics-mcp",
+      "env": {
+        "VERCEL_TOKEN": "...",
+        "VERCEL_PROJECT_ID": "...",
+        "PH_DEV_TOKEN": "...",
+        "PH_LAUNCH_SLUG": "your-launch-slug",
+        "OPENPANEL_CLIENT_ID": "...",
+        "OPENPANEL_CLIENT_SECRET": "...",
+        "HYPERDX_API_KEY": "...",
+        "SUPABASE_PERSONAL_ACCESS_TOKEN": "...",
+        "SUPABASE_PROJECT_REF": "...",
+        "ANTHROPIC_API_KEY": "..."
+      }
+    }
+  }
+}
+```
+
+工具:
+- `get_brief(include_summary)` —— 完整 markdown 早报
+- `get_alerts()` —— alert 模式输出:`All clear` 或各 source 严重度
+- `get_source(name)` —— 单个 source(vercel / producthunt / openpanel / hyperdx / supabase)
+- `usage_summary()` —— 本地 usage log 的 token + $ 汇总
 
 ## 协议
 
