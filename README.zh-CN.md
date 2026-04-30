@@ -5,6 +5,7 @@
 > 给独立开发者 launch 用的每日早晨简报 + 实时异常告警。读 Vercel + OpenPanel + HyperDX + Supabase + Product Hunt,在用户骂你之前先告诉你哪里挂了。
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/funnel-analytics-agent.svg)](https://pypi.org/project/funnel-analytics-agent/)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#)
 
 作者 [Alex Ji](https://github.com/alex-jb) — 单人独立开发者,在做 [VibeXForge](https://github.com/alex-jb/vibex)。这工具诞生于这一句话:

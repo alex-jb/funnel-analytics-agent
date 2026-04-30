@@ -5,6 +5,7 @@
 > Daily morning brief + real-time anomaly alerts for indie launches. Reads Vercel + OpenPanel + HyperDX + Supabase + Product Hunt, surfaces what's broken before your users tell you.
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/funnel-analytics-agent.svg)](https://pypi.org/project/funnel-analytics-agent/)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#)
 
 Built by [Alex Ji](https://github.com/alex-jb) — solo founder shipping [VibeXForge](https://github.com/alex-jb/vibex). Born from this thought:
