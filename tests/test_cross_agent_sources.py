@@ -10,7 +10,6 @@ import pathlib
 import sys
 from datetime import datetime, timezone, timedelta
 
-import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
