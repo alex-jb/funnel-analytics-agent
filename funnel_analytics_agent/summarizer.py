@@ -92,4 +92,25 @@ def summarize(reports: list[SourceReport],
     )
     if err is not None:
         return ""
-    return AnthropicClient.extract_text(resp)
+    text = AnthropicClient.extract_text(resp)
+    # L3 skill library: each successful narrative summary is an example
+    # of "summarize source reports → 2-4 sentence brief". Future
+    # distillation lets us replace SYSTEM_PROMPT with a learned one.
+    if text:
+        try:
+            from solo_founder_os import record_example
+            ok_sources = sum(1 for r in reports if not r.error)
+            failed_sources = sum(1 for r in reports if r.error)
+            record_example(
+                "summarize-morning-brief",
+                inputs={
+                    "n_sources_ok": ok_sources,
+                    "n_sources_failed": failed_sources,
+                    "model": model,
+                },
+                output=text[:1500],
+                note="Claude narrative summary",
+            )
+        except Exception:
+            pass
+    return text
