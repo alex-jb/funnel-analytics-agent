@@ -131,6 +131,17 @@ def main(argv: list[str] | None = None) -> int:
                         line = f"[{r.source}] {m.severity.upper()}: {m.note}"
                         critical_lines.append(line)
                         print(line, file=sys.stderr)
+                        # Reflexion log: alerts during PH-day are the
+                        # signal-richest moments. Per-source so we learn
+                        # which sources tend to misfire vs catch real issues.
+                        try:
+                            from solo_founder_os import log_outcome
+                            log_outcome(".funnel-analytics-agent",
+                                        task=f"alert_{r.source}",
+                                        outcome="FAILED",
+                                        signal=f"{m.severity}: {m.note[:200]}")
+                        except Exception:
+                            pass
             # Push notification on critical/alert
             if notify_targets and critical_lines:
                 results = fan_out(
