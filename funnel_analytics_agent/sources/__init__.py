@@ -8,6 +8,7 @@ from .hyperdx import HyperDXSource
 from .buildquality import BuildQualitySource
 from .agent_spend import AgentSpendSource
 from .vibex import VibexSource
+from .github_stars import GithubStarsSource
 
 __all__ = [
     "MetricSample",
@@ -21,4 +22,5 @@ __all__ = [
     "BuildQualitySource",
     "AgentSpendSource",
     "VibexSource",
+    "GithubStarsSource",
 ]

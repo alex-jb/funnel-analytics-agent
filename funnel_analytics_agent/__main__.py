@@ -31,6 +31,7 @@ from .sources import (
     BuildQualitySource,
     AgentSpendSource,
     VibexSource,
+    GithubStarsSource,
 )
 from .sources.base import Source
 
@@ -43,6 +44,7 @@ ALL_SOURCES: dict[str, type[Source]] = {
     "build_quality": BuildQualitySource,
     "agent_spend": AgentSpendSource,
     "vibex": VibexSource,
+    "github_stars": GithubStarsSource,
 }
 
 
