@@ -60,6 +60,12 @@ def main(argv: list[str] | None = None) -> int:
                    help="Compose markdown brief (default mode)")
     p.add_argument("--alert", action="store_true",
                    help="Real-time mode — exit 2 if critical/alert severity found")
+    p.add_argument("--retro", action="store_true",
+                   help="Generate post-launch retrospective (markdown). Pulls "
+                        "all sources, writes a 'what just happened' summary "
+                        "fit for Obsidian / dev.to / X.")
+    p.add_argument("--since-hours", type=int, default=24,
+                   help="Window for --retro mode (default 24h = PH+24h post-mortem)")
     p.add_argument("--source", action="append", default=None,
                    choices=list(ALL_SOURCES.keys()),
                    help="Limit to specific source(s); default: all configured")
@@ -102,6 +108,18 @@ def main(argv: list[str] | None = None) -> int:
     notify_str = args.notify or os.getenv("NOTIFIER_DEFAULT", "")
     notify_targets = [n.strip() for n in notify_str.split(",")
                       if n.strip() and n.strip() in ALL_NOTIFIERS]
+
+    # ── Retro mode ───────────────────────────────────────────
+    # Doesn't write to baseline (it's a one-shot post-mortem, not a sample).
+    if args.retro:
+        from .retro import render_retro
+        text = render_retro(reports, since_hours=args.since_hours)
+        if args.out:
+            Path(args.out).write_text(text)
+            print(f"✓ retro written to {args.out}", file=sys.stderr)
+        else:
+            print(text)
+        return 0
 
     if args.alert:
         # Real-time alert mode: exit 2 if any critical/alert
