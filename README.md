@@ -20,12 +20,15 @@ Two modes, one agent:
 
 **Alert mode** — runs every 10 minutes during your launch window, exits with code `2` if anything critical/alert severity is found. Your wrapper script pages you (Telegram, Slack, ntfy.sh).
 
-Sources in v0.2:
+Sources (v0.9, 8 total):
 - **Vercel** — latest deployment state, deployments in last 24h, failed deploys
 - **Product Hunt** — live vote count, comment count, momentum check on launch day
 - **Supabase advisor** — security + performance lints; surfaces every CRITICAL individually
 - **OpenPanel** — count of tracked events (signup_completed, project_submit_completed, …) over last 24h; warns when an event drops to 0 (tracking regression)
 - **HyperDX** — error log count over last N hours; severity climbs from info → warn → alert as count crosses 10 / 50 thresholds
+- **Build Quality** — last 24h of pre-push reviews from build-quality-agent's local log (verdicts, BLOCK count, token spend)
+- **Agent Spend** — cross-agent Anthropic $ MTD aggregated across `~/.<agent>/usage.jsonl` files
+- **VibeX** — direct SQL pull of core launch-board metrics (new creators / submissions / cumulative plays / stage distribution); zero Claude calls. Configure via `VIBEX_PROJECT_REF` (or reuse `SUPABASE_PROJECT_REF` if it's the same project)
 
 ## Install
 

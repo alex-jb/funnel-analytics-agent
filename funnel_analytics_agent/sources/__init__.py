@@ -7,6 +7,7 @@ from .openpanel import OpenPanelSource
 from .hyperdx import HyperDXSource
 from .buildquality import BuildQualitySource
 from .agent_spend import AgentSpendSource
+from .vibex import VibexSource
 
 __all__ = [
     "MetricSample",
@@ -19,4 +20,5 @@ __all__ = [
     "HyperDXSource",
     "BuildQualitySource",
     "AgentSpendSource",
+    "VibexSource",
 ]

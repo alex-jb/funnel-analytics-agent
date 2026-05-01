@@ -20,12 +20,15 @@
 
 **Alert 模式** —— launch 窗口期间每 10 分钟跑一次,发现 critical / alert 级别问题就 exit 2。你的 cron wrapper 收到非 0 退出就给你发 Telegram / Slack / ntfy.sh。
 
-v0.2 数据源:
+数据源(v0.9 共 8 个):
 - **Vercel** —— 最新部署状态、24 小时内部署次数、失败部署
 - **Product Hunt** —— 实时票数、评论数、launch 当天动量检查
 - **Supabase advisor** —— 安全 + 性能 lint;每个 CRITICAL 单独列一条
 - **OpenPanel** —— 24 小时内被追踪事件的数量(signup_completed 等);事件归零时 warn(可能 tracking regression)
 - **HyperDX** —— N 小时内 error log 数量;严重等级随数量爬阶 info → warn → alert(10 / 50 阈值)
+- **Build Quality** —— 跨 agent 读 build-quality-agent 本地 review log,带 verdict + BLOCK 数 + token 花费
+- **Agent Spend** —— 聚合 `~/.<agent>/usage.jsonl` 算每个 agent 的 Anthropic 月度花费
+- **VibeX** —— 直接 SQL 拉 launch-board 核心指标(新注册 / 新提交 / 累计 plays / 阶段分布);零 Claude 调用。配置 `VIBEX_PROJECT_REF`(或如果是同一个 Supabase 项目就复用 `SUPABASE_PROJECT_REF`)
 
 ## 安装
 
