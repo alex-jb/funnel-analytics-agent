@@ -26,6 +26,7 @@ import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 
+from ..milestones import check_crossing
 from .base import MetricSample, Source, SourceReport
 
 
@@ -179,6 +180,31 @@ class VibexSource(Source):
                 value=myth,
                 severity="alert",  # Promotes the brief when first Myth appears
                 note=f"{myth} project(s) at Myth stage — share them!",
+            ))
+
+        # ── PH-day milestone crossings → alert + ready-to-send tweet ──
+        # Each gauge metric checked against its threshold ladder. State is
+        # persisted in ~/.funnel-analytics-agent/milestones.json so the
+        # same milestone fires once. The notifier fan-out (ntfy/Telegram/
+        # Slack) surfaces these — Alex pastes the tweet, hits send.
+        for metric_name, value in [
+            ("vibex_total_upvotes", total_upvotes),
+            ("vibex_total_plays", total_plays),
+            ("vibex_total_creators", total_creators),
+            ("vibex_myth_count", myth),
+        ]:
+            crossing = check_crossing(metric_name, value)
+            if crossing is None:
+                continue
+            threshold, tweet = crossing
+            report.metrics.append(MetricSample(
+                name=f"milestone_{metric_name}_{threshold}",
+                value=threshold,
+                severity="alert",
+                note=(f"🎉 milestone crossed: {metric_name} = {value} "
+                      f"(passed {threshold}). Ready tweet:\n\n{tweet}"),
+                raw={"metric": metric_name, "threshold": threshold,
+                     "value": value, "tweet": tweet},
             ))
 
         return report
