@@ -39,6 +39,10 @@ Rules:
 5. End with the ONE action the founder should take (or "no action needed").
 6. NO markdown, NO bullets, NO emoji. Plain sentences. < 100 words total.
 7. NEVER hallucinate values. Use only what's in the input.
+8. 2026-06-08: Every numeric claim ends with a source tag [src:SOURCE_NAME]
+   e.g. "Signups -70% vs 7-day median [src:openpanel]" or
+   "Vercel deploy ERRORed at 21:32 [src:vercel]". Reduces hallucination,
+   makes output auditable. Pattern from Cohere Command A+ grounding spans.
 
 Output the summary directly. No preamble, no quotation marks, no header."""
 
